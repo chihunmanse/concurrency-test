@@ -1,0 +1,173 @@
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, DataSource } from 'typeorm';
+import { Coupon } from '../entity/coupon.entity';
+
+@Injectable()
+export class CouponService {
+  constructor(
+    @InjectRepository(Coupon)
+    private readonly couponRepository: Repository<Coupon>,
+    private readonly dataSource: DataSource,
+  ) {}
+
+  // 1. 락을 걸지 않은 경우
+  async assignCouponWithoutLock(
+    userId: number,
+  ): Promise<{ readCoupon: Coupon; saveCoupon: Coupon }> {
+    const coupon = await this.couponRepository.findOne({
+      where: { isRedeemed: false },
+      order: { id: 'ASC' },
+    });
+
+    if (!coupon) {
+      throw new Error('No available coupons');
+    }
+
+    coupon.isRedeemed = true;
+    coupon.userId = userId;
+
+    return {
+      readCoupon: coupon,
+      saveCoupon: await this.couponRepository.save(coupon),
+    };
+  }
+
+  // 3. 비관적 읽기 락
+  async assignCouponWithPessimisticReadLock(userId: number): Promise<{
+    readCoupon: Coupon;
+    saveCoupon: Coupon | null;
+    error: string | undefined;
+  }> {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.startTransaction();
+
+    let coupon;
+    let saveCoupon;
+    let error;
+
+    try {
+      coupon = await queryRunner.manager
+        .createQueryBuilder(Coupon, 'coupon')
+        .where('coupon.isRedeemed = :isRedeemed', { isRedeemed: false })
+        .setLock('pessimistic_read')
+        .orderBy('coupon.id', 'ASC')
+        .getOne();
+
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+
+      if (!coupon) {
+        throw new Error('No available coupons');
+      }
+
+      coupon.isRedeemed = true;
+      coupon.userId = userId;
+
+      saveCoupon = await queryRunner.manager.save(coupon);
+
+      await queryRunner.commitTransaction();
+    } catch (e) {
+      await queryRunner.rollbackTransaction();
+      error = e.message;
+    } finally {
+      await queryRunner.release();
+
+      return {
+        readCoupon: coupon,
+        saveCoupon,
+        error,
+      };
+    }
+  }
+
+  // 4. 비관적 쓰기 락
+  async assignCouponWithPessimisticWriteLock(userId: number): Promise<{
+    readCoupon: Coupon;
+    saveCoupon: Coupon | null;
+    error: string | undefined;
+  }> {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.startTransaction();
+
+    let coupon;
+    let saveCoupon;
+    let error;
+
+    try {
+      coupon = await queryRunner.manager
+        .createQueryBuilder(Coupon, 'coupon')
+        .where('coupon.isRedeemed = :isRedeemed', { isRedeemed: false })
+        .setLock('pessimistic_write')
+        .orderBy('coupon.id', 'ASC')
+        .getOne();
+
+      if (!coupon) {
+        throw new Error('No available coupon');
+      }
+
+      coupon.isRedeemed = true;
+      coupon.userId = userId;
+
+      saveCoupon = await queryRunner.manager.save(coupon);
+
+      await queryRunner.commitTransaction();
+    } catch (e) {
+      await queryRunner.rollbackTransaction();
+      error = e.message;
+    } finally {
+      await queryRunner.release();
+
+      return {
+        readCoupon: coupon,
+        saveCoupon,
+        error,
+      };
+    }
+  }
+
+  // 5. 비관적 쓰기 락 - No Wait
+  async assignCouponWithPessimisticWriteLockNoWait(userId: number): Promise<{
+    readCoupon: Coupon;
+    saveCoupon: Coupon | undefined;
+    error: string | undefined;
+  }> {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.startTransaction();
+
+    let coupon;
+    let saveCoupon;
+    let error;
+
+    try {
+      coupon = await queryRunner.manager
+        .createQueryBuilder(Coupon, 'coupon')
+        .where('coupon.isRedeemed = :isRedeemed', { isRedeemed: false })
+        .setLock('pessimistic_write')
+        .setOnLocked('nowait')
+        .orderBy('coupon.id', 'ASC')
+        .getOne();
+
+      if (!coupon) {
+        throw new Error('No available coupon');
+      }
+
+      coupon.isRedeemed = true;
+      coupon.userId = userId;
+
+      saveCoupon = await queryRunner.manager.save(coupon);
+
+      await queryRunner.commitTransaction();
+    } catch (e) {
+      await queryRunner.rollbackTransaction();
+      error = e.message;
+    } finally {
+      await queryRunner.release();
+
+      return {
+        readCoupon: coupon,
+        saveCoupon,
+        error,
+      };
+    }
+  }
+}

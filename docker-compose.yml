@@ -1,0 +1,13 @@
+version: '3'
+
+services:
+  mysql:
+    image: mysql:latest
+    container_name: test-db
+    environment:
+      - MYSQL_DATABASE=test-db
+      - MYSQL_USER=local
+      - MYSQL_PASSWORD=localpass
+      - MYSQL_ROOT_PASSWORD=rootpass
+    ports:
+      - '3306:3306'
