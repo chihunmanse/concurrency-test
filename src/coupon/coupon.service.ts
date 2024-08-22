@@ -35,9 +35,9 @@ export class CouponService {
 
   // 3. 비관적 읽기 락
   async assignCouponWithPessimisticReadLock(userId: number): Promise<{
-    readCoupon: Coupon;
-    saveCoupon: Coupon | null;
-    error: string | undefined;
+    readCoupon?: Coupon;
+    saveCoupon?: Coupon;
+    error?: string;
   }> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.startTransaction();
@@ -82,9 +82,9 @@ export class CouponService {
 
   // 4. 비관적 쓰기 락
   async assignCouponWithPessimisticWriteLock(userId: number): Promise<{
-    readCoupon: Coupon;
-    saveCoupon: Coupon | null;
-    error: string | undefined;
+    readCoupon?: Coupon;
+    saveCoupon?: Coupon;
+    error?: string;
   }> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.startTransaction();
@@ -127,9 +127,9 @@ export class CouponService {
 
   // 5. 비관적 쓰기 락 - No Wait
   async assignCouponWithPessimisticWriteLockNoWait(userId: number): Promise<{
-    readCoupon: Coupon;
-    saveCoupon: Coupon | undefined;
-    error: string | undefined;
+    readCoupon?: Coupon;
+    saveCoupon?: Coupon;
+    error?: string;
   }> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.startTransaction();
@@ -169,5 +169,40 @@ export class CouponService {
         error,
       };
     }
+  }
+
+  // 6. 낙관적 락
+  async assignCouponWithOptimisticLock(userId: number): Promise<{
+    readCoupon?: Coupon;
+    saveCoupon?: Coupon;
+    error?: string;
+  }> {
+    const coupon = await this.couponRepository.findOne({
+      where: { isRedeemed: false },
+      order: { id: 'ASC' },
+    });
+
+    if (!coupon) {
+      throw new Error('No available coupons');
+    }
+
+    const updateResult = await this.couponRepository.update(
+      { id: coupon.id, version: coupon.version },
+      { isRedeemed: true, userId },
+    );
+
+    if (updateResult.affected === 0) {
+      return {
+        readCoupon: coupon,
+        error: 'Optimistic lock version mismatch',
+      };
+    }
+
+    return {
+      readCoupon: coupon,
+      saveCoupon: await this.couponRepository.findOne({
+        where: { id: coupon.id },
+      }),
+    };
   }
 }

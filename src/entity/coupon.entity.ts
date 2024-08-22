@@ -4,6 +4,7 @@ import {
   Column,
   ManyToOne,
   JoinColumn,
+  VersionColumn,
 } from 'typeorm';
 import { User } from './user.entity';
 
@@ -24,4 +25,7 @@ export class Coupon {
 
   @Column({ name: 'user_id', nullable: true })
   userId: number;
+
+  @VersionColumn()
+  version: number;
 }

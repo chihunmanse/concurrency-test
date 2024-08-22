@@ -23,6 +23,7 @@ describe('CouponLock', () => {
           database: 'test-db',
           entities: [Coupon, User],
           synchronize: true,
+          logging: ['query'],
         }),
         TypeOrmModule.forFeature([Coupon, User]),
       ],
@@ -195,6 +196,41 @@ describe('CouponLock', () => {
         expect(result1.error).toBe(
           'Statement aborted because lock(s) could not be acquired immediately and NOWAIT is set.',
         );
+      }
+    });
+  });
+
+  describe('assignCouponWithOptimisticLock', () => {
+    it('should handle concurrent requests with optimistic lock', async () => {
+      const user1 = await userRepository.save({ name: 'user1' });
+      const user2 = await userRepository.save({ name: 'user2' });
+      const coupon = await couponRepository.save({
+        code: 'OPTIMISTIC_LOCK_COUPON',
+      });
+      const expectedVersion = coupon.version + 1;
+
+      const result1Promise = service.assignCouponWithOptimisticLock(user1.id);
+      const result2Promise = service.assignCouponWithOptimisticLock(user2.id);
+
+      const [result1, result2] = await Promise.all([
+        result1Promise,
+        result2Promise,
+      ]);
+
+      if (result1.saveCoupon) {
+        expect(result1.readCoupon.code).toBe('OPTIMISTIC_LOCK_COUPON');
+        expect(result1.readCoupon.version).toBe(coupon.version);
+        expect(result1.saveCoupon.code).toBe('OPTIMISTIC_LOCK_COUPON');
+        expect(result1.saveCoupon.userId).toBe(user1.id);
+        expect(result1.saveCoupon.version).toBe(expectedVersion);
+        expect(result2.error).toBe(`Optimistic lock version mismatch`);
+      } else {
+        expect(result2.readCoupon.code).toBe('OPTIMISTIC_LOCK_COUPON');
+        expect(result2.readCoupon.version).toBe(coupon.version);
+        expect(result2.saveCoupon.code).toBe('OPTIMISTIC_LOCK_COUPON');
+        expect(result2.saveCoupon.userId).toBe(user1.id);
+        expect(result2.saveCoupon.version).toBe(expectedVersion);
+        expect(result1.error).toBe(`Optimistic lock version mismatch`);
       }
     });
   });
