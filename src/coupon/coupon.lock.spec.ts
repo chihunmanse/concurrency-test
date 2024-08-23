@@ -228,7 +228,7 @@ describe('CouponLock', () => {
         expect(result2.readCoupon.code).toBe('OPTIMISTIC_LOCK_COUPON');
         expect(result2.readCoupon.version).toBe(coupon.version);
         expect(result2.saveCoupon.code).toBe('OPTIMISTIC_LOCK_COUPON');
-        expect(result2.saveCoupon.userId).toBe(user1.id);
+        expect(result2.saveCoupon.userId).toBe(user2.id);
         expect(result2.saveCoupon.version).toBe(expectedVersion);
         expect(result1.error).toBe(`Optimistic lock version mismatch`);
       }
