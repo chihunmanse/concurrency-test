@@ -61,7 +61,6 @@ describe('CouponLock', () => {
         result2Promise,
       ]);
 
-      // 두 사용자가 동일한 쿠폰을 얻을 수 있음
       expect(result1.readCoupon.code).toBe('WITHOUT_LOCK_COUPON');
       expect(result2.readCoupon.code).toBe('WITHOUT_LOCK_COUPON');
       expect(result1.saveCoupon.code).toBe('WITHOUT_LOCK_COUPON');
