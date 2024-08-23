@@ -54,8 +54,6 @@ export class CouponService {
         .orderBy('coupon.id', 'ASC')
         .getOne();
 
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-
       if (!coupon) {
         throw new Error('No available coupons');
       }
