@@ -1,10 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import {
-  Repository,
-  DataSource,
-  OptimisticLockVersionMismatchError,
-} from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { Coupon } from '../entity/coupon.entity';
 
 @Injectable()
@@ -206,61 +202,5 @@ export class CouponService {
         where: { id: coupon.id },
       }),
     };
-  }
-
-  // 7. 낙관적 락 - 트랜잭션 사용
-  async assignCouponWithOptimisticLockUsingTransaction(
-    userId: number,
-  ): Promise<{
-    readCoupon?: Coupon;
-    saveCoupon?: Coupon;
-    error?: string;
-  }> {
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.startTransaction();
-
-    let coupon;
-    let saveCoupon;
-    let error;
-
-    try {
-      coupon = await queryRunner.manager
-        .createQueryBuilder(Coupon, 'coupon')
-        .where('coupon.isRedeemed = :isRedeemed', { isRedeemed: false })
-        .orderBy('coupon.id', 'ASC')
-        .getOne();
-
-      if (!coupon) {
-        throw new Error('No available coupon');
-      }
-
-      const expectedVersion = coupon.version + 1;
-
-      coupon.isRedeemed = true;
-      coupon.userId = userId;
-
-      saveCoupon = await queryRunner.manager.getRepository(Coupon).save(coupon);
-
-      if (saveCoupon.version !== expectedVersion) {
-        throw new OptimisticLockVersionMismatchError(
-          'Coupon',
-          expectedVersion,
-          saveCoupon.version,
-        );
-      }
-
-      await queryRunner.commitTransaction();
-    } catch (e) {
-      await queryRunner.rollbackTransaction();
-      error = e.message;
-    } finally {
-      await queryRunner.release();
-
-      return {
-        readCoupon: coupon,
-        saveCoupon,
-        error,
-      };
-    }
   }
 }

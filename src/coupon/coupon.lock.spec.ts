@@ -233,59 +233,5 @@ describe('CouponLock', () => {
         expect(result1.error).toBe(`Optimistic lock version mismatch`);
       }
     });
-
-    it('should handle concurrent requests with optimistic lock using transaction', async () => {
-      const user1 = await userRepository.save({ name: 'user1' });
-      const user2 = await userRepository.save({ name: 'user2' });
-      const coupon = await couponRepository.save({
-        code: 'OPTIMISTIC_LOCK_USING_TRANSACTION_COUPON',
-      });
-      const expectedVersion = coupon.version + 1;
-
-      const result1Promise =
-        service.assignCouponWithOptimisticLockUsingTransaction(user1.id);
-      const result2Promise =
-        service.assignCouponWithOptimisticLockUsingTransaction(user2.id);
-
-      const [result1, result2] = await Promise.all([
-        result1Promise,
-        result2Promise,
-      ]);
-
-      const updatedCoupon = await couponRepository.findOne({
-        where: { id: coupon.id },
-      });
-
-      // result1이 성공한 경우
-      if (result2.error) {
-        expect(result1.readCoupon.code).toBe(
-          'OPTIMISTIC_LOCK_USING_TRANSACTION_COUPON',
-        );
-        expect(result1.saveCoupon.code).toBe(
-          'OPTIMISTIC_LOCK_USING_TRANSACTION_COUPON',
-        );
-        expect(result1.saveCoupon.userId).toBe(user1.id);
-        expect(result2.error).toBe(
-          `The optimistic lock on entity Coupon failed, version ${expectedVersion} was expected, but is actually ${expectedVersion + 1}.`,
-        );
-        // 실패한 결과 rollback 여부 확인
-        expect(updatedCoupon.userId).toBe(user1.id);
-      }
-      // result2가 성공한 경우
-      else {
-        expect(result2.readCoupon.code).toBe(
-          'OPTIMISTIC_LOCK_USING_TRANSACTION_COUPON',
-        );
-        expect(result2.saveCoupon.code).toBe(
-          'OPTIMISTIC_LOCK_USING_TRANSACTION_COUPON',
-        );
-        expect(result2.saveCoupon.userId).toBe(user2.id);
-        expect(result1.error).toBe(
-          `The optimistic lock on entity Coupon failed, version ${expectedVersion} was expected, but is actually ${expectedVersion + 1}.`,
-        );
-        // 실패한 결과 rollback 여부 확인
-        expect(updatedCoupon.userId).toBe(user2.id);
-      }
-    });
   });
 });
