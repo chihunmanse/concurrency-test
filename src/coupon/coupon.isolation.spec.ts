@@ -5,7 +5,7 @@ import { Coupon } from '../entity/coupon.entity';
 import { User } from '../entity/user.entity';
 import { DataSource, Repository } from 'typeorm';
 
-describe('Isolation', () => {
+describe('Isolation Level', () => {
   let dataSource: DataSource;
   let couponRepository: Repository<Coupon>;
   let userRepository: Repository<User>;

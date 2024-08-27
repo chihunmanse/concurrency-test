@@ -5,7 +5,7 @@ import { Coupon } from '../entity/coupon.entity';
 import { User } from '../entity/user.entity';
 import { DataSource, Repository } from 'typeorm';
 
-describe('CouponLock', () => {
+describe('Lock', () => {
   let service: CouponService;
   let dataSource: DataSource;
   let couponRepository: Repository<Coupon>;
@@ -47,7 +47,7 @@ describe('CouponLock', () => {
     await dataSource.destroy();
   });
 
-  describe('assignCouponWithoutLock', () => {
+  describe('Without Lock', () => {
     it('should handle concurrent requests without locks', async () => {
       const user1 = await userRepository.save({ name: 'user1' });
       const user2 = await userRepository.save({ name: 'user2' });
@@ -70,7 +70,7 @@ describe('CouponLock', () => {
     });
   });
 
-  describe('assignCouponWithPessimisticReadLock', () => {
+  describe('Pessimistic Read Lock', () => {
     it('should handle concurrent requests with pessimistic read lock', async () => {
       const user1 = await userRepository.save({ name: 'user1' });
       const user2 = await userRepository.save({ name: 'user2' });
@@ -109,7 +109,7 @@ describe('CouponLock', () => {
     });
   });
 
-  describe('assignCouponWithPessimisticWriteLock', () => {
+  describe('Pessimistic Write Lock', () => {
     it('should handle concurrent requests with pessimistic wite lock', async () => {
       const user1 = await userRepository.save({ name: 'user1' });
       const user2 = await userRepository.save({ name: 'user2' });
@@ -199,7 +199,7 @@ describe('CouponLock', () => {
     });
   });
 
-  describe('assignCouponWithOptimisticLock', () => {
+  describe('Optimistic Lock', () => {
     it('should handle concurrent requests with optimistic lock', async () => {
       const user1 = await userRepository.save({ name: 'user1' });
       const user2 = await userRepository.save({ name: 'user2' });
