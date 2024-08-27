@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TypeOrmModule, getRepositoryToken } from '@nestjs/typeorm';
-import { CouponService } from './coupon.service';
-import { Coupon } from '../entity/coupon.entity';
-import { User } from '../entity/user.entity';
+import { CouponService } from '../../coupon/coupon.service';
+import { Coupon } from '../../entity/coupon.entity';
+import { User } from '../../entity/user.entity';
 import { DataSource, Repository } from 'typeorm';
 
 describe('Isolation Level', () => {
