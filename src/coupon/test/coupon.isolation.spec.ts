@@ -144,7 +144,7 @@ describe('Isolation Level', () => {
       await queryRunner2.startTransaction('READ UNCOMMITTED');
 
       try {
-        // 트랜잭션 1이 모든 쿠폰을 조회
+        // 트랜잭션 1이 isRedeemd가 false인 쿠폰을 조회
         const couponsBefore = await queryRunner1.manager.find(Coupon, {
           where: { isRedeemed: false },
         });
@@ -155,11 +155,10 @@ describe('Isolation Level', () => {
         });
         await queryRunner2.commitTransaction();
 
-        // 트랜잭션 1이 다시 모든 쿠폰을 조회 (phantom read 발생)
+        // 트랜잭션 1이 다시 isRedeemd가 false인 쿠폰을 조회 (phantom read 발생)
         const couponsAfter = await queryRunner1.manager.find(Coupon, {
           where: { isRedeemed: false },
         });
-        console.log(couponsAfter);
 
         expect(couponsBefore.length).toBe(1);
         expect(couponsAfter.length).toBe(2);
@@ -232,7 +231,7 @@ describe('Isolation Level', () => {
       await queryRunner2.startTransaction('READ COMMITTED');
 
       try {
-        // 트랜잭션 1이 모든 쿠폰을 조회
+        // 트랜잭션 1이 isRedeemd가 false인 쿠폰을 조회
         const couponsBefore = await queryRunner1.manager.find(Coupon, {
           where: { isRedeemed: false },
         });
@@ -243,11 +242,10 @@ describe('Isolation Level', () => {
         });
         await queryRunner2.commitTransaction();
 
-        // 트랜잭션 1이 다시 모든 쿠폰을 조회 (phantom read 발생)
+        // 트랜잭션 1이 다시 isRedeemd가 false인 쿠폰을 조회 (phantom read 발생)
         const couponsAfter = await queryRunner1.manager.find(Coupon, {
           where: { isRedeemed: false },
         });
-        console.log(couponsAfter);
 
         expect(couponsBefore.length).toBe(1);
         expect(couponsAfter.length).toBe(2);
@@ -371,7 +369,7 @@ describe('Isolation Level', () => {
         // 처음 조회한 상태와 동일해야 함
         expect(coupon1Before.isRedeemed).toBe(coupon1After.isRedeemed);
 
-        await queryRunner1.rollbackTransaction();
+        await queryRunner1.commitTransaction();
       } finally {
         await queryRunner2.release();
         await queryRunner1.release();
@@ -391,7 +389,7 @@ describe('Isolation Level', () => {
       await queryRunner2.startTransaction('REPEATABLE READ');
 
       try {
-        // 트랜잭션 1이 모든 쿠폰을 조회
+        // 트랜잭션 1이 isRedeemd가 false인 쿠폰을 조회
         const couponsBefore = await queryRunner1.manager.find(Coupon, {
           where: { isRedeemed: false },
         });
@@ -402,7 +400,7 @@ describe('Isolation Level', () => {
         });
         await queryRunner2.commitTransaction();
 
-        // 트랜잭션 1이 다시 모든 쿠폰을 조회 (phantom read 발생하지 않음)
+        // 트랜잭션 1이 다시 isRedeemd가 false인 쿠폰을 조회 (phantom read 발생하지 않음)
         const couponsAfter = await queryRunner1.manager.find(Coupon, {
           where: { isRedeemed: false },
         });
