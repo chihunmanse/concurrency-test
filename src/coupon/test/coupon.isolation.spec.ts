@@ -6,6 +6,7 @@ import { User } from '../../entity/user.entity';
 import { DataSource, Repository } from 'typeorm';
 
 describe('Isolation Level', () => {
+  let couponService: CouponService;
   let dataSource: DataSource;
   let couponRepository: Repository<Coupon>;
   let userRepository: Repository<User>;
@@ -29,6 +30,7 @@ describe('Isolation Level', () => {
       providers: [CouponService],
     }).compile();
 
+    couponService = module.get<CouponService>(CouponService);
     dataSource = module.get<DataSource>(DataSource);
     couponRepository = module.get<Repository<Coupon>>(
       getRepositoryToken(Coupon),
@@ -411,6 +413,43 @@ describe('Isolation Level', () => {
       } finally {
         await queryRunner2.release();
         await queryRunner1.release();
+      }
+    });
+  });
+
+  describe('Serializable', () => {
+    it('should handle concurrent requests with SERIALIZABLE isolation level', async () => {
+      const user1 = await userRepository.save({ name: 'user1' });
+      const user2 = await userRepository.save({ name: 'user2' });
+      await couponRepository.save({ code: 'COUPON_1' });
+
+      const result1Promise =
+        couponService.assignCouponWithSerializableIsolation(user1.id);
+      const result2Promise =
+        couponService.assignCouponWithSerializableIsolation(user2.id);
+
+      const [result1, result2] = await Promise.all([
+        result1Promise,
+        result2Promise,
+      ]);
+
+      // SELECT에 공유락이 걸리기 때문에 쿠폰 읽기는 가능
+      expect(result1.readCoupon.code).toBe('COUPON_1');
+      expect(result2.readCoupon.code).toBe('COUPON_1');
+      if (result1.saveCoupon) {
+        expect(result1.saveCoupon.code).toBe('COUPON_1');
+        expect(result1.saveCoupon.userId).toBe(user1.id);
+        expect(result2.saveCoupon).toBeUndefined();
+        expect(result2.error).toBe(
+          'Deadlock found when trying to get lock; try restarting transaction',
+        );
+      } else {
+        expect(result2.saveCoupon.code).toBe('COUPON_1');
+        expect(result2.saveCoupon.userId).toBe(user2.id);
+        expect(result1.saveCoupon).toBeUndefined();
+        expect(result1.error).toBe(
+          'Deadlock found when trying to get lock; try restarting transaction',
+        );
       }
     });
   });

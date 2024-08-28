@@ -203,4 +203,48 @@ export class CouponService {
       }),
     };
   }
+
+  // 1. SERIALIZABLE 격리 수준 트랜잭션
+  async assignCouponWithSerializableIsolation(userId: number): Promise<{
+    readCoupon?: Coupon;
+    saveCoupon?: Coupon;
+    error?: string;
+  }> {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.startTransaction('SERIALIZABLE');
+
+    let coupon;
+    let saveCoupon;
+    let error;
+
+    try {
+      coupon = await queryRunner.manager
+        .createQueryBuilder(Coupon, 'coupon')
+        .where('coupon.isRedeemed = :isRedeemed', { isRedeemed: false })
+        .orderBy('coupon.id', 'ASC')
+        .getOne();
+
+      if (!coupon) {
+        throw new Error('No available coupons');
+      }
+
+      coupon.isRedeemed = true;
+      coupon.userId = userId;
+
+      saveCoupon = await queryRunner.manager.save(coupon);
+
+      await queryRunner.commitTransaction();
+    } catch (e) {
+      await queryRunner.rollbackTransaction();
+      error = e.message;
+    } finally {
+      await queryRunner.release();
+
+      return {
+        readCoupon: coupon,
+        saveCoupon,
+        error,
+      };
+    }
+  }
 }

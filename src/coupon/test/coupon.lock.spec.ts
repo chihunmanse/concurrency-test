@@ -6,7 +6,7 @@ import { User } from '../../entity/user.entity';
 import { DataSource, Repository } from 'typeorm';
 
 describe('Lock', () => {
-  let service: CouponService;
+  let couponService: CouponService;
   let dataSource: DataSource;
   let couponRepository: Repository<Coupon>;
   let userRepository: Repository<User>;
@@ -30,7 +30,7 @@ describe('Lock', () => {
       providers: [CouponService],
     }).compile();
 
-    service = module.get<CouponService>(CouponService);
+    couponService = module.get<CouponService>(CouponService);
     dataSource = module.get<DataSource>(DataSource);
     couponRepository = module.get<Repository<Coupon>>(
       getRepositoryToken(Coupon),
@@ -53,8 +53,8 @@ describe('Lock', () => {
       const user2 = await userRepository.save({ name: 'user2' });
       await couponRepository.save({ code: 'WITHOUT_LOCK_COUPON' });
 
-      const result1Promise = service.assignCouponWithoutLock(user1.id);
-      const result2Promise = service.assignCouponWithoutLock(user2.id);
+      const result1Promise = couponService.assignCouponWithoutLock(user1.id);
+      const result2Promise = couponService.assignCouponWithoutLock(user2.id);
 
       const [result1, result2] = await Promise.all([
         result1Promise,
@@ -76,10 +76,10 @@ describe('Lock', () => {
       const user2 = await userRepository.save({ name: 'user2' });
       await couponRepository.save({ code: 'PESSIMISTIC_READ_LOCK_COUPON' });
 
-      const result1Promise = service.assignCouponWithPessimisticReadLock(
+      const result1Promise = couponService.assignCouponWithPessimisticReadLock(
         user1.id,
       );
-      const result2Promise = service.assignCouponWithPessimisticReadLock(
+      const result2Promise = couponService.assignCouponWithPessimisticReadLock(
         user2.id,
       );
 
@@ -117,10 +117,10 @@ describe('Lock', () => {
         code: 'PESSIMISTIC_WRITE_LOCK_COUPON',
       });
 
-      const result1Promise = service.assignCouponWithPessimisticWriteLock(
+      const result1Promise = couponService.assignCouponWithPessimisticWriteLock(
         user1.id,
       );
-      const result2Promise = service.assignCouponWithPessimisticWriteLock(
+      const result2Promise = couponService.assignCouponWithPessimisticWriteLock(
         user2.id,
       );
 
@@ -155,12 +155,10 @@ describe('Lock', () => {
         code: 'PESSIMISTIC_WRITE_LOCK_NO_WAIT_COUPON',
       });
 
-      const result1Promise = service.assignCouponWithPessimisticWriteLockNoWait(
-        user1.id,
-      );
-      const result2Promise = service.assignCouponWithPessimisticWriteLockNoWait(
-        user2.id,
-      );
+      const result1Promise =
+        couponService.assignCouponWithPessimisticWriteLockNoWait(user1.id);
+      const result2Promise =
+        couponService.assignCouponWithPessimisticWriteLockNoWait(user2.id);
 
       const [result1, result2] = await Promise.all([
         result1Promise,
@@ -208,8 +206,12 @@ describe('Lock', () => {
       });
       const expectedVersion = coupon.version + 1;
 
-      const result1Promise = service.assignCouponWithOptimisticLock(user1.id);
-      const result2Promise = service.assignCouponWithOptimisticLock(user2.id);
+      const result1Promise = couponService.assignCouponWithOptimisticLock(
+        user1.id,
+      );
+      const result2Promise = couponService.assignCouponWithOptimisticLock(
+        user2.id,
+      );
 
       const [result1, result2] = await Promise.all([
         result1Promise,
